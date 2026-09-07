@@ -1,0 +1,9 @@
+﻿  EBO.cpp
+  VAO.cpp
+C:\Users\Cepa0\source\repos\OpenGLBRO\OpenGLBRO\src\VAO.cpp(13,63): warning C4244: 'argument': conversion from 'GLsizeiptr' to 'GLsizei', possible loss of data
+  VBO.cpp
+  main.cpp
+  shaderClass.cpp
+  Generating Code...
+LINK : warning LNK4098: defaultlib 'MSVCRT' conflicts with use of other libs; use /NODEFAULTLIB:library
+  OpenGLBRO.vcxproj -> C:\Users\Cepa0\source\repos\OpenGLBRO\x64\Debug\OpenGLBRO.exe

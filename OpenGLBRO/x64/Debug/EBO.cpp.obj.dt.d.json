@@ -1,0 +1,14 @@
+{
+    "Version": "1.2",
+    "Data": {
+        "Source": "c:\\users\\cepa0\\source\\repos\\openglbro\\openglbro\\src\\ebo.cpp",
+        "ProvidedModule": "",
+        "Includes": [
+            "c:\\users\\cepa0\\source\\repos\\openglbro\\openglbro\\src\\ebo.h",
+            "c:\\users\\cepa0\\source\\repos\\openglbro\\linking\\include\\glad\\glad.h",
+            "c:\\users\\cepa0\\source\\repos\\openglbro\\linking\\include\\khr\\khrplatform.h"
+        ],
+        "ImportedModules": [],
+        "ImportedHeaderUnits": []
+    }
+}

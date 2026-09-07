@@ -1,0 +1,7 @@
+<Solution>
+  <Configurations>
+    <Platform Name="x64" />
+    <Platform Name="x86" />
+  </Configurations>
+  <Project Path="OpenGLBRO/OpenGLBRO.vcxproj" Id="064397c9-91cf-44af-aada-4d341e713b1c" />
+</Solution>
