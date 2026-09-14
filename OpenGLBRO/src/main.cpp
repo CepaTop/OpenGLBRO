@@ -8,15 +8,12 @@
 #include"EBO.h"
 
 
-// Vertices coordinates
+// 2 Vértices: Posición (X, Y, Z) + Color (R, G, B)
 GLfloat vertices[] =
-{ //               COORDENADAS                 /     COLORES           //
-	-0.5f, -0.5f * float(sqrt(3)) * 1 / 3, 0.0f,     0.8f, 0.3f,  0.02f, // Esquina inferior izquierda
-	 0.5f, -0.5f * float(sqrt(3)) * 1 / 3, 0.0f,     0.8f, 0.3f,  0.02f, // Esquina inferior derecha
-	 0.0f,  0.5f * float(sqrt(3)) * 2 / 3, 0.0f,     1.0f, 0.6f,  0.32f, // Esquina superior
-	-0.25f, 0.5f * float(sqrt(3)) * 1 / 6, 0.0f,     0.9f, 0.45f, 0.17f, // Interior izquierdo
-	 0.25f, 0.5f * float(sqrt(3)) * 1 / 6, 0.0f,     0.9f, 0.45f, 0.17f, // Interior derecho
-	 0.0f, -0.5f * float(sqrt(3)) * 1 / 3, 0.0f,     0.8f, 0.3f,  0.02f  // Interior iinferior
+{
+	// Coordenadas (X, Y, Z)    // Colores (R, G, B)
+	-0.8f,  0.0f, 0.0f,        1.0f, 1.0f, 1.0f, // Punto 1: Izquierda (Blanco)
+	 0.8f,  0.0f, 0.0f,        1.0f, 1.0f, 1.0f  // Punto 2: Derecha (Blanco)
 };
 
 // Índices para el orden de los vértices
@@ -26,8 +23,6 @@ GLuint indices[] =
 	3, 2, 4, // Triangulo inferior derecho
 	5, 4, 1 // Triangulo superior
 };
-
-
 
 int main()
 {
@@ -101,8 +96,11 @@ int main()
 		glUniform1f(uniID, 0.5f);
 		// Vincula el VAO para que OpenGL sepa que debe usarlo
 		VAO1.Bind();
-		// Dibuja primitivas, número de índices, tipo de dato de los índices, puntero a los índices
-		glDrawElements(GL_TRIANGLES, 9, GL_UNSIGNED_INT, 0);
+		// DIBUJAR LA LÍNEA: 
+		// GL_LINES le dice a OpenGL que vincule los puntos de 2 en 2
+		// 0 es el índice de inicio
+		// 2 es la cantidad total de vértices
+		glDrawArrays(GL_LINES, 0, 2);
 		// Intercambia el back buffer con el front buffer
 		glfwSwapBuffers(window);
 		// Se encarga de todos los eventos de GLFW
