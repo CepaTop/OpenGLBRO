@@ -30,7 +30,7 @@ std::set<std::pair<int, int>> calcularLineaBresenham(int x0, int y0, int x1, int
 
         if (x0 == x1 && y0 == y1) break;
 
-        int e2 = 1.5 * err;
+        int e2 = 2 * err;
         if (e2 > -dy)
         {
             err -= dy;
@@ -45,6 +45,12 @@ std::set<std::pair<int, int>> calcularLineaBresenham(int x0, int y0, int x1, int
     return celdasLinea;
 }
 
+void framebuffer_size_callback(GLFWwindow* window, int width, int height)
+{
+    // Actualiza el área de dibujo de OpenGL para que coincida con la ventana
+    glViewport(0, 0, width, height);
+}
+
 int main()
 {
     // --- Configuración Inicial de GLFW y OpenGL ---
@@ -53,7 +59,7 @@ int main()
     glfwWindowHint(GLFW_CONTEXT_VERSION_MINOR, 3);
     glfwWindowHint(GLFW_OPENGL_PROFILE, GLFW_OPENGL_CORE_PROFILE);
 
-    GLFWwindow* window = glfwCreateWindow(800, 800, "Linea Rasterizada en Grilla", NULL, NULL);
+    GLFWwindow* window = glfwCreateWindow(1080, 1900, "Linea Rasterizada en Grilla", NULL, NULL);
     if (window == NULL)
     {
         std::cout << "Error al crear la ventana" << std::endl;
@@ -61,9 +67,10 @@ int main()
         return -1;
     }
     glfwMakeContextCurrent(window);
+    glfwSetFramebufferSizeCallback(window, framebuffer_size_callback);
 
     gladLoadGL();
-    glViewport(0, 0, 800, 800);
+
 
     Shader shaderProgram("default.vert", "default.frag");
 
