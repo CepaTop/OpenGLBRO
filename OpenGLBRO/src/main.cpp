@@ -2,11 +2,10 @@
 #include<glad/glad.h>
 #include<GLFW/glfw3.h>
 
+#include <vector>
 #include"shaderClass.h"
 #include"VAO.h"
 #include"VBO.h"
-#include"EBO.h"
-
 
 // 2 Vértices: Posición (X, Y, Z) + Color (R, G, B)
 GLfloat vertices[] =
@@ -26,97 +25,99 @@ GLuint indices[] =
 
 int main()
 {
-	// Inicializa GLFW
-	glfwInit();
+    // --- 1. INICIALIZACIÓN DE GLFW Y LA VENTANA (Lo que ya tenías) ---
+    glfwInit();
+    glfwWindowHint(GLFW_CONTEXT_VERSION_MAJOR, 3);
+    glfwWindowHint(GLFW_CONTEXT_VERSION_MINOR, 3);
+    glfwWindowHint(GLFW_OPENGL_PROFILE, GLFW_OPENGL_CORE_PROFILE);
 
-	// Le dice a GLFW qué versión de OpenGL estamos usando
-	// En este caso estamos usando OpenGL 3.3
-	glfwWindowHint(GLFW_CONTEXT_VERSION_MAJOR, 3);
-	glfwWindowHint(GLFW_CONTEXT_VERSION_MINOR, 3);
-	// Le dice a GLFW que estamos usando el CORE perfil
-	// Lo que significa que solo tenemos las funciones modernas
-	glfwWindowHint(GLFW_OPENGL_PROFILE, GLFW_OPENGL_CORE_PROFILE);
+    GLFWwindow* window = glfwCreateWindow(800, 800, "OpenGLBRO - Grilla", NULL, NULL);
+    if (window == NULL)
+    {
+        std::cout << "Failed to create GLFW window" << std::endl;
+        glfwTerminate();
+        return -1;
+    }
+    glfwMakeContextCurrent(window);
 
-	// Crea un objeto GLFWwindow de 800 por 800 pixeles, llamandolo "OPENGLBRO"
-	GLFWwindow* window = glfwCreateWindow(800, 800, "OPENGLBRO", NULL, NULL);
-	// Error check if the window fails to create
-	if (window == NULL)
-	{
-		std::cout << "Failed to create GLFW window" << std::endl;
-		glfwTerminate();
-		return -1;
-	}
-	// Introduce la ventana en el contexto actual
-	glfwMakeContextCurrent(window);
+    gladLoadGL();
+    glViewport(0, 0, 800, 800);
 
-	//Carga GLAD para que configure OpenGL
-	gladLoadGL();
-	// Especifica el viewport de OpenGL en la ventana
-	// En este caso el viewport va desde x = 0, y = 0, hasta x = 800, y = 800
-	glViewport(0, 0, 800, 800);
+    // Genera el objeto Shader
+    Shader shaderProgram("default.vert", "default.frag");
 
+    // --- 2. GENERACIÓN MATEMÁTICA DE LA GRILLA ---
+    // En lugar del arreglo fijo, usamos un vector que va creciendo
+    std::vector<GLfloat> gridVertices;
+    float paso = 0.1f;   // Qué tan juntas están las líneas (puedes cambiarlo a 0.2f, etc.)
+    float limite = 1.0f; // Los bordes de la pantalla (-1.0 a 1.0)
 
+    for (float i = -limite; i <= limite; i += paso)
+    {
+        // LINEAS VERTICALES
+        // Punto inferior (X, Y, Z) y Color (R, G, B) - Color Gris claro
+        gridVertices.push_back(i); gridVertices.push_back(-limite); gridVertices.push_back(0.0f);
+        gridVertices.push_back(0.7f); gridVertices.push_back(0.7f); gridVertices.push_back(0.7f);
+        // Punto superior (X, Y, Z) y Color (R, G, B)
+        gridVertices.push_back(i); gridVertices.push_back(limite); gridVertices.push_back(0.0f);
+        gridVertices.push_back(0.7f); gridVertices.push_back(0.7f); gridVertices.push_back(0.7f);
 
-	// Genera el objeto Shader usando los shaders default.vert y default.frag
-	Shader shaderProgram("default.vert", "default.frag");
+        // LINEAS HORIZONTALES
+        // Punto izquierdo (X, Y, Z) y Color (R, G, B)
+        gridVertices.push_back(-limite); gridVertices.push_back(i); gridVertices.push_back(0.0f);
+        gridVertices.push_back(0.7f); gridVertices.push_back(0.7f); gridVertices.push_back(0.7f);
+        // Punto derecho (X, Y, Z) y Color (R, G, B)
+        gridVertices.push_back(limite); gridVertices.push_back(i); gridVertices.push_back(0.0f);
+        gridVertices.push_back(0.7f); gridVertices.push_back(0.7f); gridVertices.push_back(0.7f);
+    }
 
-
-
-	// Genera un Vertex Array Object (VAO) y lo vincula
-	VAO VAO1;
-	VAO1.Bind();
-
-	// Genera un Vertex Buffer Object (VBO) y lo vincula a los vértices
-	VBO VBO1(vertices, sizeof(vertices));
-	// Genera un Element Buffer Object (EBO) y lo vincula a los índices
-	EBO EBO1(indices, sizeof(indices));
-
-	// Vincula los atributos del VBO, como coordenadas y colores, al VAO
-	VAO1.LinkAttrib(VBO1, 0, 3, GL_FLOAT, 6 * sizeof(float), (void*)0);
-	VAO1.LinkAttrib(VBO1, 1, 3, GL_FLOAT, 6 * sizeof(float), (void*)(3 * sizeof(float)));
-	// Desvincula todo para evitar modificarlos accidentalmente
-	VAO1.Unbind();
-	VBO1.Unbind();
-	EBO1.Unbind();
-
-	// Obtiene el ID del uniform llamado "scale"
-	GLuint uniID = glGetUniformLocation(shaderProgram.ID, "scale");
+    // Calculamos cuántos vértices se generaron en total (cada vértice tiene 6 datos: x,y,z, r,g,b)
+    GLsizei numVertices = static_cast<GLsizei>(gridVertices.size() / 6);
 
 
-	// Main while principal
-	while (!glfwWindowShouldClose(window))
-	{
-		// Especifica el color del fondo
-		glClearColor(0.07f, 0.13f, 0.17f, 1.0f);
-		// Limpia el back buffer y le asigna el nuevo color
-		glClear(GL_COLOR_BUFFER_BIT);
-		// Le dice a OpenGL qué Shader Program queremos usar
-		shaderProgram.Activate();
-		// Asigna un valor al uniform; NOTA: Siempre debe hacerse después de activar el Shader Program
-		glUniform1f(uniID, 0.5f);
-		// Vincula el VAO para que OpenGL sepa que debe usarlo
-		VAO1.Bind();
-		// DIBUJAR LA LÍNEA: 
-		// GL_LINES le dice a OpenGL que vincule los puntos de 2 en 2
-		// 0 es el índice de inicio
-		// 2 es la cantidad total de vértices
-		glDrawArrays(GL_LINES, 0, 2);
-		// Intercambia el back buffer con el front buffer
-		glfwSwapBuffers(window);
-		// Se encarga de todos los eventos de GLFW
-		glfwPollEvents();
-	}
+    // --- 3. CONFIGURACIÓN DE VAO Y VBO ---
+    VAO VAO1;
+    VAO1.Bind();
+
+    // Aquí le pasamos el vector al VBO usando .data() y .size()
+    VBO VBO1(gridVertices.data(), gridVertices.size() * sizeof(GLfloat));
+
+    // Le decimos a OpenGL cómo leer los datos (exactamente igual que como lo tenías)
+    // Posición (Layout 0)
+    VAO1.LinkAttrib(VBO1, 0, 3, GL_FLOAT, 6 * sizeof(float), (void*)0);
+    // Color (Layout 1)
+    VAO1.LinkAttrib(VBO1, 1, 3, GL_FLOAT, 6 * sizeof(float), (void*)(3 * sizeof(float)));
+
+    // Desvinculamos para evitar modificaciones accidentales
+    VAO1.Unbind();
+    VBO1.Unbind();
 
 
+    // --- 4. BUCLE DE DIBUJO (MAIN LOOP) ---
+    while (!glfwWindowShouldClose(window))
+    {
+        // Fondo negro para que resalte la grilla gris
+        glClearColor(0.07f, 0.13f, 0.17f, 1.0f);
+        glClear(GL_COLOR_BUFFER_BIT);
 
-	// Elimina todos los objetos que hemos creado
-	VAO1.Delete();
-	VBO1.Delete();
-	EBO1.Delete();
-	shaderProgram.Delete();
-	// Elimina la ventana antes de finalizar el programa
-	glfwDestroyWindow(window);
-	// Termina GLFW antes de finalizar el programa
-	glfwTerminate();
-	return 0;
+        // Activamos los shaders y el VAO
+        shaderProgram.Activate();
+        VAO1.Bind();
+
+        // ¡DIBUJAMOS LA GRILLA! usando GL_LINES en lugar de triángulos
+        glDrawArrays(GL_LINES, 0, numVertices);
+
+        // Refresca la ventana
+        glfwSwapBuffers(window);
+        glfwPollEvents();
+    }
+
+    // --- 5. LIMPIEZA FINAL ---
+    VAO1.Delete();
+    VBO1.Delete();
+    shaderProgram.Delete();
+    glfwDestroyWindow(window);
+    glfwTerminate();
+
+    return 0;
 }
