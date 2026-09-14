@@ -1,30 +1,21 @@
-#include<iostream>
-#include<glad/glad.h>
-#include<GLFW/glfw3.h>
-
+#include <iostream>
+#include <glad/glad.h>
+#include <GLFW/glfw3.h>
 #include <vector>
-#include"shaderClass.h"
-#include"VAO.h"
-#include"VBO.h"
 
-// 2 Vértices: Posición (X, Y, Z) + Color (R, G, B)
-GLfloat vertices[] =
-{
-	// Coordenadas (X, Y, Z)    // Colores (R, G, B)
-	-0.8f,  0.0f, 0.0f,        1.0f, 1.0f, 1.0f, // Punto 1: Izquierda (Blanco)
-	 0.8f,  0.0f, 0.0f,        1.0f, 1.0f, 1.0f  // Punto 2: Derecha (Blanco)
-};
+#include "shaderClass.h"
+#include "VAO.h"
+#include "VBO.h"
 
-// Índices para el orden de los vértices
 int main()
 {
-    // --- 1. INICIALIZACIÓN DE GLFW Y LA VENTANA ---
+    //INICIALIZACIÓN DE GLFW Y LA VENTANA
     glfwInit();
     glfwWindowHint(GLFW_CONTEXT_VERSION_MAJOR, 3);
     glfwWindowHint(GLFW_CONTEXT_VERSION_MINOR, 3);
     glfwWindowHint(GLFW_OPENGL_PROFILE, GLFW_OPENGL_CORE_PROFILE);
 
-    GLFWwindow* window = glfwCreateWindow(800, 800, "OpenGLBRO - Grilla", NULL, NULL);
+    GLFWwindow* window = glfwCreateWindow(800, 800, "OpenGLBRO - Grilla de Cuadrados", NULL, NULL);
     if (window == NULL)
     {
         std::cout << "Failed to create GLFW window" << std::endl;
@@ -36,76 +27,87 @@ int main()
     gladLoadGL();
     glViewport(0, 0, 800, 800);
 
-    // Genera el objeto Shader
     Shader shaderProgram("default.vert", "default.frag");
 
-    // --- 2. GENERACIÓN MATEMÁTICA DE LA GRILLA ---
-    // En lugar del arreglo fijo, usamos un vector que va creciendo
-    std::vector<GLfloat> gridVertices;
-    float paso = 0.1f;   // Qué tan juntas están las líneas (puedes cambiarlo a 0.2f, etc.)
-    float limite = 1.0f; // Los bordes de la pantalla (-1.0 a 1.0)
+    // GENERACIÓN MATEMÁTICA DE LA MATRIZ DE CUADRADOS 
+    std::vector<GLfloat> squareVertices;
 
-    for (float i = -limite; i <= limite; i += paso)
+    float tamano = 0.12f; // Tamaño de cada cuadrado
+    float paso = 0.16f;   // Distancia entre el inicio de cada cuadrado
+
+    // Doble bucle for: recorre eje X (columnas) y eje Y (filas)
+    for (float x = -0.9f; x <= 0.8f; x += paso)
     {
-        // LINEAS VERTICALES
-        // Punto inferior (X, Y, Z) y Color (R, G, B) - Color Gris claro
-        gridVertices.push_back(i); gridVertices.push_back(-limite); gridVertices.push_back(0.0f);
-        gridVertices.push_back(0.7f); gridVertices.push_back(0.7f); gridVertices.push_back(0.7f);
-        // Punto superior (X, Y, Z) y Color (R, G, B)
-        gridVertices.push_back(i); gridVertices.push_back(limite); gridVertices.push_back(0.0f);
-        gridVertices.push_back(0.7f); gridVertices.push_back(0.7f); gridVertices.push_back(0.7f);
+        for (float y = -0.9f; y <= 0.8f; y += paso)
+        {
+            // Coordenadas de las 4 esquinas del cuadrado
+            float x1 = x;
+            float y1 = y;
+            float x2 = x + tamano;
+            float y2 = y + tamano;
 
-        // LINEAS HORIZONTALES
-        // Punto izquierdo (X, Y, Z) y Color (R, G, B)
-        gridVertices.push_back(-limite); gridVertices.push_back(i); gridVertices.push_back(0.0f);
-        gridVertices.push_back(0.7f); gridVertices.push_back(0.7f); gridVertices.push_back(0.7f);
-        // Punto derecho (X, Y, Z) y Color (R, G, B)
-        gridVertices.push_back(limite); gridVertices.push_back(i); gridVertices.push_back(0.0f);
-        gridVertices.push_back(0.7f); gridVertices.push_back(0.7f); gridVertices.push_back(0.7f);
+            // Color para el cuadrado (R, G, B) 
+            float r = 0.1f, g = 0.3f, b = 0.8f;
+
+            // TRIÁNGULO 1 (Abajo-Izquierda, Abajo-Derecha, Arriba-Derecha) 
+            squareVertices.push_back(x1); squareVertices.push_back(y1); squareVertices.push_back(0.0f);
+            squareVertices.push_back(r);  squareVertices.push_back(g);  squareVertices.push_back(b);
+
+            squareVertices.push_back(x2); squareVertices.push_back(y1); squareVertices.push_back(0.0f);
+            squareVertices.push_back(r);  squareVertices.push_back(g);  squareVertices.push_back(b);
+
+            squareVertices.push_back(x2); squareVertices.push_back(y2); squareVertices.push_back(0.0f);
+            squareVertices.push_back(r);  squareVertices.push_back(g);  squareVertices.push_back(b);
+
+            // TRIÁNGULO 2 (Abajo-Izquierda, Arriba-Derecha, Arriba-Izquierda) 
+            squareVertices.push_back(x1); squareVertices.push_back(y1); squareVertices.push_back(0.0f);
+            squareVertices.push_back(r);  squareVertices.push_back(g);  squareVertices.push_back(b);
+
+            squareVertices.push_back(x2); squareVertices.push_back(y2); squareVertices.push_back(0.0f);
+            squareVertices.push_back(r);  squareVertices.push_back(g);  squareVertices.push_back(b);
+
+            squareVertices.push_back(x1); squareVertices.push_back(y2); squareVertices.push_back(0.0f);
+            squareVertices.push_back(r);  squareVertices.push_back(g);  squareVertices.push_back(b);
+        }
     }
 
-    // Calculamos cuántos vértices se generaron en total (cada vértice tiene 6 datos: x,y,z, r,g,b)
-    GLsizei numVertices = static_cast<GLsizei>(gridVertices.size() / 6);
+    // Calculamos la cantidad total de vértices
+    GLsizei numVertices = static_cast<GLsizei>(squareVertices.size() / 6);
 
-
-    // --- 3. CONFIGURACIÓN DE VAO Y VBO ---
+    //CONFIGURACIÓN DE VAO Y VBO 
     VAO VAO1;
     VAO1.Bind();
 
-    // Aquí le pasamos el vector al VBO usando .data() y .size()
-    VBO VBO1(gridVertices.data(), gridVertices.size() * sizeof(GLfloat));
+    VBO VBO1(squareVertices.data(), squareVertices.size() * sizeof(GLfloat));
 
-    // Le decimos a OpenGL cómo leer los datos (exactamente igual que como lo tenías)
-    // Posición (Layout 0)
+    // Posición (Attribute 0)
     VAO1.LinkAttrib(VBO1, 0, 3, GL_FLOAT, 6 * sizeof(float), (void*)0);
-    // Color (Layout 1)
+    // Color (Attribute 1)
     VAO1.LinkAttrib(VBO1, 1, 3, GL_FLOAT, 6 * sizeof(float), (void*)(3 * sizeof(float)));
 
-    // Desvinculamos para evitar modificaciones accidentales
     VAO1.Unbind();
     VBO1.Unbind();
 
+    // OPCIONAL: Descomenta la siguiente línea si quieres ver SOLO los bordes/líneas de los cuadrados (Wireframe)
+    // glPolygonMode(GL_FRONT_AND_BACK, GL_LINE);
 
-    // --- 4. BUCLE DE DIBUJO (MAIN LOOP) ---
+    // BUCLE PRINCIPAL 
     while (!glfwWindowShouldClose(window))
     {
-        // Fondo negro para que resalte la grilla gris
         glClearColor(0.07f, 0.13f, 0.17f, 1.0f);
         glClear(GL_COLOR_BUFFER_BIT);
 
-        // Activamos los shaders y el VAO
         shaderProgram.Activate();
         VAO1.Bind();
 
-        // ¡DIBUJAMOS LA GRILLA! usando GL_LINES en lugar de triángulos
-        glDrawArrays(GL_LINES, 0, numVertices);
+        // Cambiamos GL_LINES por GL_TRIANGLES
+        glDrawArrays(GL_TRIANGLES, 0, numVertices);
 
-        // Refresca la ventana
         glfwSwapBuffers(window);
         glfwPollEvents();
     }
 
-    // --- 5. LIMPIEZA FINAL ---
+    // LIMPIEZA
     VAO1.Delete();
     VBO1.Delete();
     shaderProgram.Delete();
