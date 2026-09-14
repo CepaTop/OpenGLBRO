@@ -16,16 +16,9 @@ GLfloat vertices[] =
 };
 
 // Índices para el orden de los vértices
-GLuint indices[] =
-{
-	0, 3, 5, // Triangulo inferior izquierdo
-	3, 2, 4, // Triangulo inferior derecho
-	5, 4, 1 // Triangulo superior
-};
-
 int main()
 {
-    // --- 1. INICIALIZACIÓN DE GLFW Y LA VENTANA (Lo que ya tenías) ---
+    // --- 1. INICIALIZACIÓN DE GLFW Y LA VENTANA ---
     glfwInit();
     glfwWindowHint(GLFW_CONTEXT_VERSION_MAJOR, 3);
     glfwWindowHint(GLFW_CONTEXT_VERSION_MINOR, 3);
