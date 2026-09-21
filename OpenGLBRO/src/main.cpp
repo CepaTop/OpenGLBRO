@@ -9,8 +9,8 @@
 #include "VAO.h"
 #include "VBO.h"
 
-// Tamaño de la grilla (20x20 celdas)
-const int GRID_SIZE = 20;
+// Tamaño de la grilla 
+const int GRID_SIZE = 50;
 
 // 1. ALGORITMO DE BRESENHAM
 // Calcula qué coordenadas enteras (x, y) de la grilla deben encenderse
@@ -75,8 +75,8 @@ int main()
     Shader shaderProgram("default.vert", "default.frag");
 
     // --- Definir Inicio y Fin de la Línea en la Grilla ---
-    int xInicial = 1, yInicial = 2;  // Esquina inferior izquierda
-    int xFinal = 18, yFinal = 15; // Esquina superior derecha
+    int xInicial = 1, yInicial = 1;  // Esquina inferior izquierda
+    int xFinal = 48, yFinal = 48; // Esquina superior derecha
 
     // Calculamos qué cuadrados formarán la línea
     std::set<std::pair<int, int>> lineaPintada = calcularLineaBresenham(xInicial, yInicial, xFinal, yFinal);
