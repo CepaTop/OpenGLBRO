@@ -10,7 +10,7 @@
 #include "VBO.h"
 
 // Tamaño de la grilla 
-const int GRID_SIZE = 50;
+const int GRID_SIZE = 40;
 
 // 1. ALGORITMO DE BRESENHAM
 // Calcula qué coordenadas enteras (x, y) de la grilla deben encenderse
@@ -44,7 +44,41 @@ std::set<std::pair<int, int>> calcularLineaBresenham(int x0, int y0, int x1, int
     }
     return celdasLinea;
 }
+std::set<std::pair<int, int>> calcularCirculoBresenham(int xc, int yc, int r)
+{
+    std::set<std::pair<int, int>> celdasCirculo;
+    int x = 0;
+    int y = r;
+    int d = 3 - 2 * r; // Parámetro de decisión inicial
 
+    // Función lambda para aprovechar la simetría y pintar los 8 lados a la vez
+    auto agregarSimetria = [&](int cx, int cy, int px, int py) {
+        celdasCirculo.insert({ cx + px, cy + py });
+        celdasCirculo.insert({ cx - px, cy + py });
+        celdasCirculo.insert({ cx + px, cy - py });
+        celdasCirculo.insert({ cx - px, cy - py });
+        celdasCirculo.insert({ cx + py, cy + px });
+        celdasCirculo.insert({ cx - py, cy + px });
+        celdasCirculo.insert({ cx + py, cy - px });
+        celdasCirculo.insert({ cx - py, cy - px });
+        };
+
+    while (y >= x)
+    {
+        agregarSimetria(xc, yc, x, y);
+        x++;
+        if (d > 0)
+        {
+            y--;
+            d = d + 4 * (x - y) + 10;
+        }
+        else
+        {
+            d = d + 4 * x + 6;
+        }
+    }
+    return celdasCirculo;
+}
 void framebuffer_size_callback(GLFWwindow* window, int width, int height)
 {
     // Actualiza el área de dibujo de OpenGL para que coincida con la ventana
@@ -78,8 +112,13 @@ int main()
     int xInicial = 1, yInicial = 1;  // Esquina inferior izquierda
     int xFinal = 48, yFinal = 48; // Esquina superior derecha
 
+	int xCentro = 10, yCentro = 28; // Centro del círculo
+	int radio = 8; // Radio del círculo
+
     // Calculamos qué cuadrados formarán la línea
     std::set<std::pair<int, int>> lineaPintada = calcularLineaBresenham(xInicial, yInicial, xFinal, yFinal);
+
+    std::set<std::pair<int, int>> circuloPintado = calcularCirculoBresenham(xCentro, yCentro, radio);
 
     // --- Generación de los Cuadrados de la Grilla ---
     std::vector<GLfloat> squareVertices;
@@ -98,14 +137,24 @@ int main()
 
             // Determinar color: ¿Esta celda está dentro del camino de la línea?
             float red, green, blue;
-            if (lineaPintada.count({ c, r }) > 0)
+            if (lineaPintada.count({ c, r }) > 0 && circuloPintado.count({ c, r }) > 0)
             {
-                // Cuadrado de la línea: Rojo brillante
+                // Si se cruzan: Color Amarillo
+                red = 1.0f; green = 0.8f; blue = 0.2f;
+            }
+            else if (lineaPintada.count({ c, r }) > 0)
+            {
+                // Solo línea: Color Rojo
                 red = 1.0f; green = 0.2f; blue = 0.2f;
+            }
+            else if (circuloPintado.count({ c, r }) > 0)
+            {
+                // Solo círculo: Color Verde brillante
+                red = 0.2f; green = 1.0f; blue = 0.4f;
             }
             else
             {
-                // Fondo de la grilla: Gris tenue
+                // Fondo normal: Gris oscuro
                 red = 0.18f; green = 0.22f; blue = 0.28f;
             }
 
@@ -136,9 +185,7 @@ int main()
     // --- Cargar Buffers en GPU ---
     VAO VAO1;
     VAO1.Bind();
-
     VBO VBO1(squareVertices.data(), squareVertices.size() * sizeof(GLfloat));
-
     VAO1.LinkAttrib(VBO1, 0, 3, GL_FLOAT, 6 * sizeof(float), (void*)0);
     VAO1.LinkAttrib(VBO1, 1, 3, GL_FLOAT, 6 * sizeof(float), (void*)(3 * sizeof(float)));
 
