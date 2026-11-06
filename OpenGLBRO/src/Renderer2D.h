@@ -1,10 +1,6 @@
 #ifndef RENDERER2D_H
 #define RENDERER2D_H
 
-/ Renderizador 2D muy simple por lotes(batch) : acumula rectángulos de color
-// (en coordenadas de píxel, origen arriba-izquierda) y los dibuja con una sola
-// llamada a glDrawArrays. También dibuja texto con una fuente bitmap de 5x7.
-
 #include <glad/glad.h>
 #include <string>
 #include <vector>

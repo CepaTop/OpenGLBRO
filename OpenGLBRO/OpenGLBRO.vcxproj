@@ -144,11 +144,11 @@
     </Manifest>
   </ItemDefinitionGroup>
   <ItemGroup>
-    <ClCompile Include="Rasterizado.cpp" />
-    <ClCompile Include="Renderer2D.cpp" />
     <ClCompile Include="src\EBO.cpp" />
     <ClCompile Include="src\glad.c" />
     <ClCompile Include="src\main.cpp" />
+    <ClCompile Include="src\Rasterizado.cpp" />
+    <ClCompile Include="src\Renderer2D.cpp" />
     <ClCompile Include="src\shaderClass.cpp" />
     <ClCompile Include="src\VAO.cpp" />
     <ClCompile Include="src\VBO.cpp" />
@@ -161,6 +161,7 @@
     <ClInclude Include="Rasterizado.h" />
     <ClInclude Include="Renderer2D.h" />
     <ClInclude Include="src\EBO.h" />
+    <ClInclude Include="src\Renderer2D.h" />
     <ClInclude Include="src\shaderClass.h" />
     <ClInclude Include="src\VAO.h" />
     <ClInclude Include="src\VBO.h" />

@@ -4,10 +4,6 @@
 #include <cstdint>
 #include <cstring>
 
-// ---------------------------------------------------------------------------
-// Fuente bitmap 5x7. Cada glifo son 7 filas; en cada fila se usan 5 bits
-// (el bit 4 es la columna izquierda).
-// ---------------------------------------------------------------------------
 static const char* CARACTERES = "ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789:-+./%()<>,=_!?#";
 
 static const uint8_t GLIFOS[][7] = {
