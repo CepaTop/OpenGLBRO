@@ -1,14 +1,12 @@
 #version 330 core
 
-// Outputs colors in RGBA
+// Color de salida en RGBA
 out vec4 FragColor;
 
-
-// Inputs the color from the Vertex Shader
-in vec3 color;
-
+// Color recibido del Vertex Shader (incluye la opacidad en .a)
+in vec4 color;
 
 void main()
 {
-	FragColor = vec4(color, 1.0f);
+	FragColor = color;
 }
