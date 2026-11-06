@@ -145,6 +145,7 @@
   </ItemDefinitionGroup>
   <ItemGroup>
     <ClCompile Include="Rasterizado.cpp" />
+    <ClCompile Include="Renderer2D.cpp" />
     <ClCompile Include="src\EBO.cpp" />
     <ClCompile Include="src\glad.c" />
     <ClCompile Include="src\main.cpp" />
@@ -158,6 +159,7 @@
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="Rasterizado.h" />
+    <ClInclude Include="Renderer2D.h" />
     <ClInclude Include="src\EBO.h" />
     <ClInclude Include="src\shaderClass.h" />
     <ClInclude Include="src\VAO.h" />
