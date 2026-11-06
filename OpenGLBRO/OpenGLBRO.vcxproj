@@ -144,6 +144,7 @@
     </Manifest>
   </ItemDefinitionGroup>
   <ItemGroup>
+    <ClCompile Include="Rasterizado.cpp" />
     <ClCompile Include="src\EBO.cpp" />
     <ClCompile Include="src\glad.c" />
     <ClCompile Include="src\main.cpp" />
@@ -156,6 +157,7 @@
     <None Include="default.vert" />
   </ItemGroup>
   <ItemGroup>
+    <ClInclude Include="Rasterizado.h" />
     <ClInclude Include="src\EBO.h" />
     <ClInclude Include="src\shaderClass.h" />
     <ClInclude Include="src\VAO.h" />

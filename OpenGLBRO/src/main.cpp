@@ -113,7 +113,8 @@ int main()
     int xFinal = 48, yFinal = 48; // Esquina superior derecha
 
 	int xCentro = 10, yCentro = 28; // Centro del círculo
-	int radio = 8; // Radio del círculo
+	int radio = 8
+        ; // Radio del círculo
 
     // Calculamos qué cuadrados formarán la línea
     std::set<std::pair<int, int>> lineaPintada = calcularLineaBresenham(xInicial, yInicial, xFinal, yFinal);
@@ -161,20 +162,16 @@ int main()
             // Triángulo 1
             squareVertices.push_back(x1); squareVertices.push_back(y1); squareVertices.push_back(0.0f);
             squareVertices.push_back(red); squareVertices.push_back(green); squareVertices.push_back(blue);
-
             squareVertices.push_back(x2); squareVertices.push_back(y1); squareVertices.push_back(0.0f);
             squareVertices.push_back(red); squareVertices.push_back(green); squareVertices.push_back(blue);
-
             squareVertices.push_back(x2); squareVertices.push_back(y2); squareVertices.push_back(0.0f);
             squareVertices.push_back(red); squareVertices.push_back(green); squareVertices.push_back(blue);
 
             // Triángulo 2
             squareVertices.push_back(x1); squareVertices.push_back(y1); squareVertices.push_back(0.0f);
             squareVertices.push_back(red); squareVertices.push_back(green); squareVertices.push_back(blue);
-
             squareVertices.push_back(x2); squareVertices.push_back(y2); squareVertices.push_back(0.0f);
             squareVertices.push_back(red); squareVertices.push_back(green); squareVertices.push_back(blue);
-
             squareVertices.push_back(x1); squareVertices.push_back(y2); squareVertices.push_back(0.0f);
             squareVertices.push_back(red); squareVertices.push_back(green); squareVertices.push_back(blue);
         }
