@@ -11,11 +11,12 @@ Renderer2D::Renderer2D() : vao(), vbo(nullptr, 0)
 
 void Renderer2D::vertice(float x, float y, const Color& c)
 {
-vertices.push_back(y);
-vertices.push_back(c.r);
-vertices.push_back(c.g);
-vertices.push_back(c.b);
-vertices.push_back(c.a);
+    vertices.push_back(x);
+    vertices.push_back(y);
+    vertices.push_back(c.r);
+    vertices.push_back(c.g);
+    vertices.push_back(c.b);
+    vertices.push_back(c.a);
 }
 
 void Renderer2D::rect(float x, float y, float w, float h, const Color& c)

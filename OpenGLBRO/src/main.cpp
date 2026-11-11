@@ -134,9 +134,9 @@ const char* nombreFigura(TipoFigura t)
 {
     switch (t)
     {
-    case TipoFigura::Linea:   return "Línea";
-    case TipoFigura::Circulo: return "Círculo";
-    default:                  return "Triángulo";
+    case TipoFigura::Linea:   return "Linea";
+    case TipoFigura::Circulo: return "Circulo";
+    default:                  return "Triangulo";
     }
 }
 
@@ -568,15 +568,15 @@ void dibujarPanel(float altoVentana, bool mouseEnLienzo, Celda celdaMouse)
 
     // --- Herramientas ---
     ImGui::SeparatorText("Herramientas");
-    if (botonActivo("Línea (L)", app.herramienta == Herramienta::Linea, medio))
+    if (botonActivo("Linea (L)", app.herramienta == Herramienta::Linea, medio))
         cambiarHerramienta(Herramienta::Linea);
     ImGui::SameLine();
-    if (botonActivo("Círculo (C)", app.herramienta == Herramienta::Circulo, medio))
+    if (botonActivo("Circulo (C)", app.herramienta == Herramienta::Circulo, medio))
         cambiarHerramienta(Herramienta::Circulo);
-    if (botonActivo("Triángulo (T)", app.herramienta == Herramienta::Triangulo, medio))
+    if (botonActivo("Triangulo (T)", app.herramienta == Herramienta::Triangulo, medio))
         cambiarHerramienta(Herramienta::Triangulo);
     ImGui::SameLine();
-    if (botonActivo("Selección (S)", app.herramienta == Herramienta::Seleccion, medio))
+    if (botonActivo("Seleccion (S)", app.herramienta == Herramienta::Seleccion, medio))
         cambiarHerramienta(Herramienta::Seleccion);
     if (botonActivo("Balde de relleno (B)", app.herramienta == Herramienta::Balde, completo))
         cambiarHerramienta(Herramienta::Balde);
@@ -655,7 +655,7 @@ void dibujarPanel(float altoVentana, bool mouseEnLienzo, Celda celdaMouse)
     muestraDeColores(ancho, 28.0f);
 
     // --- Rotación ---
-    ImGui::SeparatorText("Rotación");
+    ImGui::SeparatorText("Rotacion");
     ImGui::BeginDisabled(!sel);
     float angulo = sel ? sel->angulo : 0.0f;
     ImGui::SetNextItemWidth(-FLT_MIN);
@@ -794,34 +794,6 @@ int main()
     GLint uResolucion = glGetUniformLocation(shaderProgram.ID, "uResolucion");
 
     Renderer2D r;
-
-    // Figuras de ejemplo
-    {
-        Figura linea;
-        linea.tipo = TipoFigura::Linea;
-        linea.puntos = { {3, 3}, {56, 20} };
-        linea.color = { 0.90f, 0.20f, 0.20f, 1.0f };
-        app.figuras.push_back(linea);
-
-        Figura circulo;
-        circulo.tipo = TipoFigura::Circulo;
-        circulo.puntos = { {16, 42} };
-        circulo.radio = 10;
-        circulo.color = { 0.00f, 0.55f, 0.50f, 1.0f };
-        circulo.relleno = true;
-        circulo.colorRelleno = { 0.60f, 0.90f, 0.30f, 0.8f };
-        app.figuras.push_back(circulo);
-
-        Figura tri;
-        tri.tipo = TipoFigura::Triangulo;
-        tri.puntos = { {32, 30}, {54, 34}, {40, 54} };
-        tri.color = { 0.10f, 0.15f, 0.50f, 1.0f };
-        tri.relleno = true;
-        tri.colorRelleno = { 0.15f, 0.40f, 0.90f, 0.6f };
-        tri.angulo = 15.0f;
-        app.figuras.push_back(tri);
-    }
-
     // --- Bucle de Renderizado ---
     while (!glfwWindowShouldClose(window))
     {
