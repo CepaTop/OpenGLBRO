@@ -87,7 +87,9 @@ struct App
     int seleccion = -1;                         // índice de la figura seleccionada
     std::vector<Celda> clicsPendientes;         // vértices de la figura en construcción
     std::vector<std::vector<Figura>> historial; // pila para deshacer
-    bool edicionEnCurso = false;                // un solo paso de deshacer por arrastre de slider
+    bool edicionEnCurso = false;   
+    bool mostrarGrilla = false; 
+    bool mostrarMarcoSeleccion = false;
 
     // Arrastre de figuras
     bool arrastrando = false;
@@ -675,6 +677,10 @@ void dibujarPanel(float altoVentana, bool mouseEnLienzo, Celda celdaMouse)
     ImGui::EndDisabled();
 
     // --- Acciones ---
+    ImGui::SeparatorText("Vista");
+    ImGui::Checkbox("Mostrar cuadricula", &app.mostrarGrilla);
+    ImGui::Checkbox("Mostrar marco de seleccion", &app.mostrarMarcoSeleccion);
+
     ImGui::SeparatorText("Acciones");
     ImGui::BeginDisabled(app.historial.empty());
     if (ImGui::Button("Deshacer (Z)", medio)) deshacer();
@@ -905,17 +911,24 @@ int main()
         auto xCelda = [&](int c) { return lx + c * cs; };
         auto yCelda = [&](int f) { return ly + (GRID_SIZE - 1 - f) * cs; };
         // Margen del 90% para dejar una separación visible entre cuadrados (como la grilla original)
-        float tamCelda = cs > 4 ? cs * 0.9f : cs;
+        float tamCelda = (app.mostrarGrilla && cs > 4) ? cs * 0.9f : cs;
         auto pintarCeldas = [&](const ConjuntoCeldas& celdas, const Color& c) {
             for (const Celda& celda : celdas)
                 r.rect(xCelda(celda.first), yCelda(celda.second), tamCelda, tamCelda, c);
             };
 
         // Grilla de fondo
-        r.rect(lx, ly, lienzo, lienzo, COL_LINEAS_GRID);
-        for (int f = 0; f < GRID_SIZE; ++f)
-            for (int c = 0; c < GRID_SIZE; ++c)
-                r.rect(xCelda(c), yCelda(f), tamCelda, tamCelda, COL_CELDA);
+        if (app.mostrarGrilla)
+        {
+            r.rect(lx, ly, lienzo, lienzo, COL_LINEAS_GRID);
+            for (int f = 0; f < GRID_SIZE; ++f)
+                for (int c = 0; c < GRID_SIZE; ++c)
+                    r.rect(xCelda(c), yCelda(f), tamCelda, tamCelda, COL_CELDA);
+        }
+        else
+        {
+            r.rect(lx, ly, lienzo, lienzo, COL_CELDA);
+        }
 
         // Figuras (en orden: las últimas quedan encima y se mezclan según su opacidad).
         // Primero el interior con el color de relleno y luego el borde con su color.
@@ -928,7 +941,8 @@ int main()
         }
 
         // Marco de la figura seleccionada y su centro de rotación
-        if (Figura* sel = figuraSeleccionada())
+        Figura* selMarco = app.mostrarMarcoSeleccion ? figuraSeleccionada() : nullptr;
+        if (Figura* sel = selMarco)
         {
             ConjuntoCeldas celdas = rasterizarFigura(*sel);
             if (!celdas.empty())
@@ -968,7 +982,7 @@ int main()
         }
 
         // Celda bajo el cursor
-        if (mouseEnLienzo)
+        if (mouseEnLienzo && app.mostrarGrilla)
             r.rectBorde(xCelda(colMouse), yCelda(filaMouse), tamCelda, tamCelda, 1, COL_SELECCION);
 
         r.dibujar();
