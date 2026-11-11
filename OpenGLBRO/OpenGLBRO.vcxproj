@@ -146,6 +146,12 @@
   <ItemGroup>
     <ClCompile Include="src\EBO.cpp" />
     <ClCompile Include="src\glad.c" />
+    <ClCompile Include="src\imgui\imgui.cpp" />
+    <ClCompile Include="src\imgui\imgui_draw.cpp" />
+    <ClCompile Include="src\imgui\imgui_impl_glfw.cpp" />
+    <ClCompile Include="src\imgui\imgui_impl_opengl3.cpp" />
+    <ClCompile Include="src\imgui\imgui_tables.cpp" />
+    <ClCompile Include="src\imgui\imgui_widgets.cpp" />
     <ClCompile Include="src\main.cpp" />
     <ClCompile Include="src\Rasterizado.cpp" />
     <ClCompile Include="src\Renderer2D.cpp" />
@@ -158,9 +164,17 @@
     <None Include="default.vert" />
   </ItemGroup>
   <ItemGroup>
-    <ClInclude Include="Rasterizado.h" />
-    <ClInclude Include="Renderer2D.h" />
     <ClInclude Include="src\EBO.h" />
+    <ClInclude Include="src\imgui\imconfig.h" />
+    <ClInclude Include="src\imgui\imgui.h" />
+    <ClInclude Include="src\imgui\imgui_impl_glfw.h" />
+    <ClInclude Include="src\imgui\imgui_impl_opengl3.h" />
+    <ClInclude Include="src\imgui\imgui_impl_opengl3_loader.h" />
+    <ClInclude Include="src\imgui\imgui_internal.h" />
+    <ClInclude Include="src\imgui\imstb_rectpack.h" />
+    <ClInclude Include="src\imgui\imstb_textedit.h" />
+    <ClInclude Include="src\imgui\imstb_truetype.h" />
+    <ClInclude Include="src\Rasterizado.h" />
     <ClInclude Include="src\Renderer2D.h" />
     <ClInclude Include="src\shaderClass.h" />
     <ClInclude Include="src\VAO.h" />

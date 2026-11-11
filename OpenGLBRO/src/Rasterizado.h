@@ -1,6 +1,9 @@
 #ifndef RASTERIZADO_H
 #define RASTERIZADO_H
 
+// Algoritmos de rasterización sobre una grilla de celdas enteras.
+// Todas las funciones devuelven el conjunto de celdas (columna, fila) que deben "encenderse".
+
 #include <set>
 #include <utility>
 

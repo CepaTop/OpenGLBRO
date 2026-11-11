@@ -73,7 +73,6 @@ ConjuntoCeldas calcularCirculoBresenham(int xc, int yc, int r)
     }
     return celdasCirculo;
 }
-
 // 3. TRIÁNGULO: unión de las tres aristas trazadas con Bresenham
 ConjuntoCeldas calcularTrianguloBresenham(int x0, int y0, int x1, int y1, int x2, int y2)
 {
