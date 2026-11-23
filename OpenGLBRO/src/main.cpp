@@ -1,16 +1,3 @@
-// ===========================================================================
-//  PAINT BRESENHAM - Prototipo de editor de dibujo sobre una grilla
-//
-//  - Línea de Bresenham, círculo de Bresenham y triángulo (3 aristas Bresenham)
-//  - Relleno de círculos y triángulos por línea de barrido (scanline)
-//  - Rotación de figuras alrededor de su centro
-//  - Color de borde y de relleno, con opacidad (alpha blending)
-//  - Selección, mover (arrastrar / flechas), borrar, deshacer y limpiar
-//
-//  La grilla y las figuras se dibujan con OpenGL (Renderer2D) y el panel de
-//  herramientas con Dear ImGui.
-// ===========================================================================
-
 #include <iostream>
 #include <glad/glad.h>
 #include <GLFW/glfw3.h>
@@ -60,8 +47,8 @@ struct Punto
     float x, y; // coordenadas en celdas de la grilla
 };
 
-enum class Herramienta { Linea, Circulo, Triangulo, Seleccion, Balde };
-enum class TipoFigura { Linea, Circulo, Triangulo };
+enum class Herramienta { Linea, Circulo, Triangulo, Seleccion,Dibujo  };
+enum class TipoFigura { Linea, Circulo, Triangulo, Dibujo };
 // Qué color se está editando en el panel
 enum class ObjetivoColor { Borde, Relleno };
 
@@ -82,6 +69,7 @@ struct App
     Color colorBorde = { 0.90f, 0.20f, 0.20f, 1.0f };   // color para bordes
     Color colorRelleno = { 1.00f, 0.85f, 0.10f, 1.0f }; // color para rellenar
     ObjetivoColor objetivoColor = ObjetivoColor::Borde;
+    bool trazando = false;
 
     std::vector<Figura> figuras;
     int seleccion = -1;                         // índice de la figura seleccionada
@@ -137,9 +125,14 @@ const char* nombreFigura(TipoFigura t)
     switch (t)
     {
     case TipoFigura::Linea:   return "Linea";
+    case TipoFigura::Dibujo:   return "Trazo libre";
     case TipoFigura::Circulo: return "Circulo";
     default:                  return "Triangulo";
     }
+}
+bool esRellenable(TipoFigura t)
+{
+    return t == TipoFigura::Circulo || t == TipoFigura::Triangulo;
 }
 
 float normalizarAngulo(float a)
@@ -212,6 +205,16 @@ void celdasFigura(const Figura& f, bool calcularInterior, ConjuntoCeldas& contor
         borde = calcularTrianguloBresenham(v[0].first, v[0].second, v[1].first, v[1].second,
             v[2].first, v[2].second);
         break;
+    case TipoFigura::Dibujo:
+        // Trazo libre: una linea de Bresenham entre cada par de puntos consecutivos,
+        // asi no quedan huecos aunque el raton se mueva rapido
+        borde.insert(v[0]);
+        for (size_t i = 1; i < v.size(); ++i)
+        {
+            ConjuntoCeldas tramo = calcularLineaBresenham(v[i - 1].first, v[i - 1].second, v[i].first, v[i].second);
+            borde.insert(tramo.begin(), tramo.end());
+        }
+        break;
     }
 
     contorno.clear();
@@ -219,7 +222,7 @@ void celdasFigura(const Figura& f, bool calcularInterior, ConjuntoCeldas& contor
     for (const Celda& c : borde)
         if (dentroDeGrilla(c)) contorno.insert(c);
 
-    if (calcularInterior && f.tipo != TipoFigura::Linea)
+    if (calcularInterior && esRellenable(f.tipo))
     {
         // El interior son las celdas del scanline que no pertenecen al borde
         for (const Celda& c : rellenarScanline(borde))
@@ -244,7 +247,7 @@ int buscarFiguraEn(Celda celda)
     {
         const Figura& f = app.figuras[i];
         ConjuntoCeldas celdas = rasterizarFigura(f, true); // clic dentro también selecciona
-        if (f.tipo == TipoFigura::Linea)
+        if (!esRellenable(f.tipo))
         {
             // Tolerancia de una celda alrededor de la línea
             for (int dx = -1; dx <= 1; ++dx)
@@ -267,7 +270,7 @@ void cambiarHerramienta(Herramienta h)
     app.herramienta = h;
     app.clicsPendientes.clear();
     // Al elegir una herramienta de dibujo, los cambios de color son para la nueva figura
-    if (h != Herramienta::Seleccion && h != Herramienta::Balde) app.seleccion = -1;
+    if (h != Herramienta::Seleccion) app.seleccion = -1;
 }
 
 void seleccionar(int indice)
@@ -277,7 +280,7 @@ void seleccionar(int indice)
     {
         // El panel muestra los colores de la figura seleccionada
         app.colorBorde = f->color;
-        if (f->tipo != TipoFigura::Linea) app.colorRelleno = f->colorRelleno;
+        if (esRellenable(f->tipo)) app.colorRelleno = f->colorRelleno;
     }
 }
 
@@ -310,7 +313,7 @@ Figura* figuraRellenable()
 {
     Figura* f = figuraSeleccionada();
     if (!f) { mostrarMensaje("Selecciona una figura"); return nullptr; }
-    if (f->tipo == TipoFigura::Linea) { mostrarMensaje("Una línea no se rellena"); return nullptr; }
+    if (!esRellenable(f->tipo)) { mostrarMensaje("Solo se rellenan circulos y triangulos"); return nullptr; }
     return f;
 }
 
@@ -341,17 +344,6 @@ void alternarRelleno()
     if (f && f->relleno) quitarRelleno();
     else rellenarSeleccion();
 }
-
-// Herramienta BALDE: clic sobre una figura para seleccionarla y rellenarla
-void rellenarConBalde(Celda celda)
-{
-    int indice = buscarFiguraEn(celda);
-    if (indice < 0) { mostrarMensaje("Haz clic sobre una figura"); return; }
-    app.seleccion = indice;
-    rellenarSeleccion();
-    seleccionar(indice);
-}
-
 // Aplica el color que se está editando (incluida la opacidad) a la figura seleccionada
 void aplicarColorASeleccion()
 {
@@ -361,7 +353,7 @@ void aplicarColorASeleccion()
     {
         f->color = app.colorBorde;
     }
-    else if (f->tipo != TipoFigura::Linea)
+    else if (esRellenable(f->tipo))
     {
         // Editar el color de relleno de una figura la deja rellena
         f->colorRelleno = app.colorRelleno;
@@ -417,7 +409,6 @@ void moverSeleccion(int dx, int dy)
 Figura construirFigura(Herramienta h, const std::vector<Celda>& clics)
 {
     // Las figuras nuevas se dibujan solo con su borde; se rellenan después
-    // con Rellenar, la tecla F o la herramienta Balde.
     Figura f;
     f.color = app.colorBorde;
     f.colorRelleno = app.colorRelleno;
@@ -487,7 +478,6 @@ void key_callback(GLFWwindow* window, int tecla, int scancode, int accion, int m
     case GLFW_KEY_C: cambiarHerramienta(Herramienta::Circulo); break;
     case GLFW_KEY_T: cambiarHerramienta(Herramienta::Triangulo); break;
     case GLFW_KEY_S: cambiarHerramienta(Herramienta::Seleccion); break;
-    case GLFW_KEY_B: cambiarHerramienta(Herramienta::Balde); break;
     case GLFW_KEY_F: alternarRelleno(); break;
     case GLFW_KEY_TAB: seleccionarSiguiente((mods & GLFW_MOD_SHIFT) ? -1 : 1); break;
     case GLFW_KEY_Q: rotarSeleccion(15.0f); break;   // antihorario
@@ -519,7 +509,6 @@ void key_callback(GLFWwindow* window, int tecla, int scancode, int accion, int m
 // Panel de herramientas con Dear ImGui
 // ---------------------------------------------------------------------------
 ImVec4 aImVec4(const Color& c) { return ImVec4(c.r, c.g, c.b, c.a); }
-ImU32 aImU32(const Color& c) { return ImGui::ColorConvertFloat4ToU32(aImVec4(c)); }
 
 // Botón que se resalta cuando está activo (para la herramienta actual)
 bool botonActivo(const char* etiqueta, bool activo, const ImVec2& tam)
@@ -532,26 +521,6 @@ bool botonActivo(const char* etiqueta, bool activo, const ImVec2& tam)
 
 // Muestra del color de borde alrededor y el de relleno adentro, sobre un tablero
 // de ajedrez para apreciar la transparencia
-void muestraDeColores(float ancho, float alto)
-{
-    ImDrawList* dl = ImGui::GetWindowDrawList();
-    ImVec2 p = ImGui::GetCursorScreenPos();
-    const float lado = 10.0f;
-    for (float y = 0; y < alto; y += lado)
-        for (float x = 0; x < ancho; x += lado)
-        {
-            bool par = ((int)(x / lado) + (int)(y / lado)) % 2 == 0;
-            ImU32 g = par ? IM_COL32(240, 240, 240, 255) : IM_COL32(180, 180, 180, 255);
-            dl->AddRectFilled(ImVec2(p.x + x, p.y + y),
-                ImVec2(p.x + std::min(x + lado, ancho), p.y + std::min(y + lado, alto)), g);
-        }
-    const float grosor = 6.0f;
-    dl->AddRectFilled(ImVec2(p.x + grosor, p.y + grosor), ImVec2(p.x + ancho - grosor, p.y + alto - grosor),
-        aImU32(app.colorRelleno));
-    dl->AddRect(ImVec2(p.x + grosor / 2, p.y + grosor / 2), ImVec2(p.x + ancho - grosor / 2, p.y + alto - grosor / 2),
-        aImU32(app.colorBorde), 0.0f, 0, grosor);
-    ImGui::Dummy(ImVec2(ancho, alto));
-}
 
 void dibujarPanel(float altoVentana, bool mouseEnLienzo, Celda celdaMouse)
 {
@@ -570,18 +539,19 @@ void dibujarPanel(float altoVentana, bool mouseEnLienzo, Celda celdaMouse)
 
     // --- Herramientas ---
     ImGui::SeparatorText("Herramientas");
-    if (botonActivo("Linea (L)", app.herramienta == Herramienta::Linea, medio))
+    if (botonActivo("Dibujo Libre ", app.herramienta == Herramienta::Dibujo, medio))
+        cambiarHerramienta(Herramienta::Dibujo);
+    ImGui::SameLine();
+    if (botonActivo("Linea ", app.herramienta == Herramienta::Linea, medio))
         cambiarHerramienta(Herramienta::Linea);
     ImGui::SameLine();
-    if (botonActivo("Circulo (C)", app.herramienta == Herramienta::Circulo, medio))
+    if (botonActivo("Circulo", app.herramienta == Herramienta::Circulo, medio))
         cambiarHerramienta(Herramienta::Circulo);
-    if (botonActivo("Triangulo (T)", app.herramienta == Herramienta::Triangulo, medio))
+    if (botonActivo("Triangulo", app.herramienta == Herramienta::Triangulo, medio))
         cambiarHerramienta(Herramienta::Triangulo);
     ImGui::SameLine();
-    if (botonActivo("Seleccion (S)", app.herramienta == Herramienta::Seleccion, medio))
+    if (botonActivo("Seleccion", app.herramienta == Herramienta::Seleccion, medio))
         cambiarHerramienta(Herramienta::Seleccion);
-    if (botonActivo("Balde de relleno (B)", app.herramienta == Herramienta::Balde, completo))
-        cambiarHerramienta(Herramienta::Balde);
 
     // --- Objeto seleccionado ---
     ImGui::SeparatorText("Objeto seleccionado");
@@ -592,8 +562,8 @@ void dibujarPanel(float altoVentana, bool mouseEnLienzo, Celda celdaMouse)
     else
         ImGui::TextDisabled("Ninguno (clic derecho o TAB)");
 
-    ImGui::BeginDisabled(!sel || sel->tipo == TipoFigura::Linea);
-    if (botonActivo("Rellenar (F)", sel && sel->relleno, medio)) rellenarSeleccion();
+    ImGui::BeginDisabled(!sel || !esRellenable(sel->tipo));
+    if (botonActivo("Rellenar ", sel && sel->relleno, medio)) rellenarSeleccion();
     ImGui::SameLine();
     if (ImGui::Button("Sin relleno", medio)) quitarRelleno();
     ImGui::EndDisabled();
@@ -654,7 +624,6 @@ void dibujarPanel(float altoVentana, bool mouseEnLienzo, Celda celdaMouse)
         color.a = opacidad / 100.0f;
         aplicarColorASeleccion();
     }
-    muestraDeColores(ancho, 28.0f);
 
     // --- Rotación ---
     ImGui::SeparatorText("Rotacion");
@@ -665,14 +634,6 @@ void dibujarPanel(float altoVentana, bool mouseEnLienzo, Celda celdaMouse)
     {
         iniciarEdicion();
         sel->angulo = std::round(angulo);
-    }
-    const ImVec2 cuarto((ancho - 3 * esp) / 4, 0);
-    const char* etiquetas[4] = { "-15", "-1", "+1", "+15" };
-    const float pasos[4] = { -15.0f, -1.0f, 1.0f, 15.0f };
-    for (int i = 0; i < 4; ++i)
-    {
-        if (i > 0) ImGui::SameLine();
-        if (ImGui::Button(etiquetas[i], cuarto)) rotarSeleccion(pasos[i]);
     }
     ImGui::EndDisabled();
 
@@ -698,15 +659,28 @@ void dibujarPanel(float altoVentana, bool mouseEnLienzo, Celda celdaMouse)
     case Herramienta::Circulo:   ImGui::TextWrapped("Clic en el centro y clic para el radio."); break;
     case Herramienta::Triangulo: ImGui::TextWrapped("Clic en los 3 vértices."); break;
     case Herramienta::Seleccion: ImGui::TextWrapped("Clic sobre una figura y arrastra para moverla."); break;
-    case Herramienta::Balde:     ImGui::TextWrapped("Clic sobre la figura que quieres rellenar."); break;
+    case Herramienta::Dibujo:    ImGui::TextWrapped("Mueve el ratón para dibujar."); break;
     }
-    if (app.herramienta != Herramienta::Seleccion && app.herramienta != Herramienta::Balde)
+    if (app.herramienta != Herramienta::Seleccion && app.herramienta != Herramienta::Dibujo)
         ImGui::Text("Puntos: %d / %d", (int)app.clicsPendientes.size(), (int)clicsNecesarios(app.herramienta));
     ImGui::Text("Figuras: %d", (int)app.figuras.size());
     if (mouseEnLienzo)
     {
         ImGui::SameLine();
         ImGui::TextDisabled("   Celda (%d, %d)", celdaMouse.first, celdaMouse.second);
+    }
+    else if (app.herramienta == Herramienta::Dibujo)
+    {
+        // Empieza un trazo nuevo; los puntos se agregan mientras se arrastra
+        guardarHistorial();
+        Figura trazo;
+        trazo.tipo = TipoFigura::Dibujo;
+        trazo.color = app.colorBorde;
+        trazo.colorRelleno = app.colorRelleno;
+        trazo.puntos = { {(float)celdaMouse.first, (float)celdaMouse.second} };
+        app.figuras.push_back(trazo);
+        app.seleccion = (int)app.figuras.size() - 1;
+        app.trazando = true;
     }
     if (!app.mensaje.empty() && glfwGetTime() - app.tiempoMensaje < 2.5)
         ImGui::TextColored(ImVec4(1.0f, 0.8f, 0.25f, 1.0f), "%s", app.mensaje.c_str());
@@ -863,10 +837,6 @@ int main()
                 app.arrastreGuardado = false;
                 app.celdaArrastre = celdaMouse;
             }
-            else if (app.herramienta == Herramienta::Balde)
-            {
-                rellenarConBalde(celdaMouse);
-            }
             else
             {
                 app.clicsPendientes.push_back(celdaMouse);
@@ -896,7 +866,21 @@ int main()
                 celdaMouse.second - app.celdaArrastre.second);
             app.celdaArrastre = celdaMouse;
         }
-        if (app.clicSoltado) app.arrastrando = false;
+        if (app.trazando && app.clicAbajo && mouseEnLienzo)
+        {
+            Figura* trazo = figuraSeleccionada();
+            if (trazo && trazo->tipo == TipoFigura::Dibujo)
+            {
+                Punto ultimo = trazo->puntos.back();
+                if ((int)ultimo.x != celdaMouse.first || (int)ultimo.y != celdaMouse.second)
+                    trazo->puntos.push_back({ (float)celdaMouse.first, (float)celdaMouse.second });
+            }
+        }
+        if (app.clicSoltado)
+        {
+            app.arrastrando = false;
+            app.trazando = false;
+        }
 
         // --- Dibujo del lienzo ---
         glViewport(0, 0, fbW, fbH);
@@ -965,8 +949,7 @@ int main()
         }
 
         // Vista previa de la figura en construcción
-        if (!app.clicsPendientes.empty() && app.herramienta != Herramienta::Seleccion &&
-            app.herramienta != Herramienta::Balde)
+        if (!app.clicsPendientes.empty() && app.herramienta != Herramienta::Seleccion )
         {
             if (mouseEnLienzo)
             {
