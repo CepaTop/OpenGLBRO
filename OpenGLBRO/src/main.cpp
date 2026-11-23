@@ -47,8 +47,8 @@ struct Punto
     float x, y; // coordenadas en celdas de la grilla
 };
 
-enum class Herramienta { Linea, Circulo, Triangulo, Seleccion,Dibujo  };
-enum class TipoFigura { Linea, Circulo, Triangulo, Dibujo };
+enum class Herramienta { Linea, Circulo, Triangulo, Seleccion, Dibujo, Balde, Borrador };
+enum class TipoFigura { Linea, Circulo, Triangulo, Dibujo, Borrador };
 // Qué color se está editando en el panel
 enum class ObjetivoColor { Borde, Relleno };
 
@@ -61,6 +61,7 @@ struct Figura
     Color color = { 0, 0, 0, 1 };        // Color del borde (RGB + opacidad)
     bool relleno = false;                // Solo círculo y triángulo
     Color colorRelleno = { 0, 0, 0, 1 }; // Color del interior cuando está rellena
+    int grosor = 1;                      // Ancho del trazo en celdas (el borrador usa mas de 1)
 };
 
 struct App
@@ -69,14 +70,16 @@ struct App
     Color colorBorde = { 0.90f, 0.20f, 0.20f, 1.0f };   // color para bordes
     Color colorRelleno = { 1.00f, 0.85f, 0.10f, 1.0f }; // color para rellenar
     ObjetivoColor objetivoColor = ObjetivoColor::Borde;
-    bool trazando = false;
+    bool trazando = false;                      // dibujando o borrando con el boton presionado
+    int trazoActual = -1;                       // indice del trazo que se esta dibujando
+    int grosorBorrador = 3;                     // tamano del borrador en celdas
 
     std::vector<Figura> figuras;
     int seleccion = -1;                         // índice de la figura seleccionada
     std::vector<Celda> clicsPendientes;         // vértices de la figura en construcción
     std::vector<std::vector<Figura>> historial; // pila para deshacer
-    bool edicionEnCurso = false;   
-    bool mostrarGrilla = false; 
+    bool edicionEnCurso = false;
+    bool mostrarGrilla = false;
     bool mostrarMarcoSeleccion = false;
 
     // Arrastre de figuras
@@ -126,6 +129,7 @@ const char* nombreFigura(TipoFigura t)
     {
     case TipoFigura::Linea:   return "Linea";
     case TipoFigura::Dibujo:   return "Trazo libre";
+    case TipoFigura::Borrador: return "Borrador";
     case TipoFigura::Circulo: return "Circulo";
     default:                  return "Triangulo";
     }
@@ -133,6 +137,17 @@ const char* nombreFigura(TipoFigura t)
 bool esRellenable(TipoFigura t)
 {
     return t == TipoFigura::Circulo || t == TipoFigura::Triangulo;
+}
+
+// Puntos que necesita cada tipo de figura para poder dibujarse
+size_t puntosMinimos(TipoFigura t)
+{
+    switch (t)
+    {
+    case TipoFigura::Linea:     return 2;
+    case TipoFigura::Triangulo: return 3;
+    default:                    return 1; // circulo (centro) y dibujo libre
+    }
 }
 
 float normalizarAngulo(float a)
@@ -150,6 +165,7 @@ float normalizarAngulo(float a)
 Punto pivote(const Figura& f)
 {
     Punto c = { 0.0f, 0.0f };
+    if (f.puntos.empty()) return c;
     for (const Punto& p : f.puntos) { c.x += p.x; c.y += p.y; }
     c.x /= f.puntos.size();
     c.y /= f.puntos.size();
@@ -193,6 +209,16 @@ void celdasFigura(const Figura& f, bool calcularInterior, ConjuntoCeldas& contor
     std::vector<Celda> v = verticesTransformados(f);
     ConjuntoCeldas borde;
 
+    // Proteccion: una figura con menos puntos de los que su tipo necesita no se dibuja.
+    // Sin esto, leer v[1] o v[2] fuera del vector cierra el programa con
+    // "vector subscript out of range".
+    if (v.size() < puntosMinimos(f.tipo))
+    {
+        contorno.clear();
+        interior.clear();
+        return;
+    }
+
     switch (f.tipo)
     {
     case TipoFigura::Linea:
@@ -206,6 +232,7 @@ void celdasFigura(const Figura& f, bool calcularInterior, ConjuntoCeldas& contor
             v[2].first, v[2].second);
         break;
     case TipoFigura::Dibujo:
+    case TipoFigura::Borrador:
         // Trazo libre: una linea de Bresenham entre cada par de puntos consecutivos,
         // asi no quedan huecos aunque el raton se mueva rapido
         borde.insert(v[0]);
@@ -215,6 +242,21 @@ void celdasFigura(const Figura& f, bool calcularInterior, ConjuntoCeldas& contor
             borde.insert(tramo.begin(), tramo.end());
         }
         break;
+    }
+
+    // Trazo grueso (borrador): cada celda se convierte en un cuadrado de grosor x grosor
+    if (f.grosor > 1)
+    {
+        ConjuntoCeldas grueso;
+        int desde = -(f.grosor - 1) / 2, hasta = f.grosor / 2;
+        for (const Celda& c : borde)
+            for (int dx = desde; dx <= hasta; ++dx)
+                for (int dy = desde; dy <= hasta; ++dy)
+                {
+                    Celda g = { c.first + dx, c.second + dy };
+                    if (dentroDeGrilla(g)) grueso.insert(g);
+                }
+        borde = grueso;
     }
 
     contorno.clear();
@@ -246,6 +288,7 @@ int buscarFiguraEn(Celda celda)
     for (int i = (int)app.figuras.size() - 1; i >= 0; --i)
     {
         const Figura& f = app.figuras[i];
+        if (f.tipo == TipoFigura::Borrador) continue;      // el borrador no se selecciona
         ConjuntoCeldas celdas = rasterizarFigura(f, true); // clic dentro también selecciona
         if (!esRellenable(f.tipo))
         {
@@ -270,7 +313,7 @@ void cambiarHerramienta(Herramienta h)
     app.herramienta = h;
     app.clicsPendientes.clear();
     // Al elegir una herramienta de dibujo, los cambios de color son para la nueva figura
-    if (h != Herramienta::Seleccion) app.seleccion = -1;
+    if (h != Herramienta::Seleccion && h != Herramienta::Balde) app.seleccion = -1;
 }
 
 void seleccionar(int indice)
@@ -287,11 +330,21 @@ void seleccionar(int indice)
 // Selecciona la figura siguiente (paso = +1) o la anterior (paso = -1)
 void seleccionarSiguiente(int paso)
 {
+    // Recorre la lista en forma circular saltando los trazos del borrador
     int n = (int)app.figuras.size();
-    if (n == 0) { mostrarMensaje("No hay figuras"); return; }
-    if (app.seleccion < 0) seleccionar(paso > 0 ? 0 : n - 1);
-    else seleccionar(((app.seleccion + paso) % n + n) % n);
-    app.clicsPendientes.clear();
+    int i = app.seleccion;
+    for (int intentos = 0; intentos < n; ++intentos)
+    {
+        if (i < 0) i = (paso > 0) ? 0 : n - 1;
+        else i = ((i + paso) % n + n) % n;
+        if (app.figuras[i].tipo != TipoFigura::Borrador)
+        {
+            seleccionar(i);
+            app.clicsPendientes.clear();
+            return;
+        }
+    }
+    mostrarMensaje("No hay figuras");
 }
 
 // Color que se está editando en el panel (el del borde o el del relleno)
@@ -338,6 +391,47 @@ void quitarRelleno()
 }
 
 // Tecla F: rellena o quita el relleno de la figura seleccionada
+// Herramienta BALDE: clic sobre una figura para seleccionarla y rellenarla
+void rellenarConBalde(Celda celda)
+{
+    int indice = buscarFiguraEn(celda);
+    if (indice < 0) { mostrarMensaje("Haz clic sobre una figura"); return; }
+    app.seleccion = indice;
+    rellenarSeleccion();
+    seleccionar(indice);
+}
+
+// Empieza un trazo libre (dibujo o borrador); los puntos se agregan mientras se arrastra
+void empezarTrazo(TipoFigura tipo, Celda celda)
+{
+    guardarHistorial();                       // un trazo completo = un paso de deshacer
+    Figura trazo;
+    trazo.tipo = tipo;
+    trazo.puntos = { {(float)celda.first, (float)celda.second} };
+    if (tipo == TipoFigura::Borrador)
+    {
+        trazo.color = COL_CELDA;              // pinta con el color del lienzo
+        trazo.grosor = app.grosorBorrador;
+    }
+    else
+    {
+        trazo.color = app.colorBorde;
+        trazo.colorRelleno = app.colorRelleno;
+    }
+    app.figuras.push_back(trazo);
+    app.trazoActual = (int)app.figuras.size() - 1;
+    // El dibujo queda seleccionado (para cambiarle color o rotarlo); el borrador no
+    app.seleccion = (tipo == TipoFigura::Dibujo) ? app.trazoActual : -1;
+    app.trazando = true;
+}
+
+// Corta el trazo en curso (al soltar el boton o si la lista de figuras cambia)
+void terminarTrazo()
+{
+    app.trazando = false;
+    app.trazoActual = -1;
+}
+
 void alternarRelleno()
 {
     Figura* f = figuraSeleccionada();
@@ -378,6 +472,7 @@ void borrarSeleccion()
     guardarHistorial();
     app.figuras.erase(app.figuras.begin() + app.seleccion);
     app.seleccion = -1;
+    terminarTrazo();
 }
 
 void deshacer()
@@ -386,6 +481,7 @@ void deshacer()
     app.figuras = app.historial.back();
     app.historial.pop_back();
     app.clicsPendientes.clear();
+    terminarTrazo();
     if (app.seleccion >= (int)app.figuras.size()) app.seleccion = -1;
     seleccionar(app.seleccion); // el panel vuelve a mostrar los colores restaurados
 }
@@ -397,6 +493,7 @@ void limpiarTodo()
     app.figuras.clear();
     app.seleccion = -1;
     app.clicsPendientes.clear();
+    terminarTrazo();
 }
 
 void moverSeleccion(int dx, int dy)
@@ -478,6 +575,8 @@ void key_callback(GLFWwindow* window, int tecla, int scancode, int accion, int m
     case GLFW_KEY_C: cambiarHerramienta(Herramienta::Circulo); break;
     case GLFW_KEY_T: cambiarHerramienta(Herramienta::Triangulo); break;
     case GLFW_KEY_S: cambiarHerramienta(Herramienta::Seleccion); break;
+    case GLFW_KEY_B: cambiarHerramienta(Herramienta::Balde); break;
+    case GLFW_KEY_G: cambiarHerramienta(Herramienta::Borrador); break;
     case GLFW_KEY_F: alternarRelleno(); break;
     case GLFW_KEY_TAB: seleccionarSiguiente((mods & GLFW_MOD_SHIFT) ? -1 : 1); break;
     case GLFW_KEY_Q: rotarSeleccion(15.0f); break;   // antihorario
@@ -539,10 +638,13 @@ void dibujarPanel(float altoVentana, bool mouseEnLienzo, Celda celdaMouse)
 
     // --- Herramientas ---
     ImGui::SeparatorText("Herramientas");
-    if (botonActivo("Dibujo Libre ", app.herramienta == Herramienta::Dibujo, medio))
+    // Dos botones por fila: un tercer SameLine() deja el boton fuera del panel
+    if (botonActivo("Dibujo Libre", app.herramienta == Herramienta::Dibujo, medio))
         cambiarHerramienta(Herramienta::Dibujo);
     ImGui::SameLine();
-    if (botonActivo("Linea ", app.herramienta == Herramienta::Linea, medio))
+    if (botonActivo("Borrador", app.herramienta == Herramienta::Borrador, medio))
+        cambiarHerramienta(Herramienta::Borrador);
+    if (botonActivo("Linea", app.herramienta == Herramienta::Linea, medio))
         cambiarHerramienta(Herramienta::Linea);
     ImGui::SameLine();
     if (botonActivo("Circulo", app.herramienta == Herramienta::Circulo, medio))
@@ -550,8 +652,16 @@ void dibujarPanel(float altoVentana, bool mouseEnLienzo, Celda celdaMouse)
     if (botonActivo("Triangulo", app.herramienta == Herramienta::Triangulo, medio))
         cambiarHerramienta(Herramienta::Triangulo);
     ImGui::SameLine();
-    if (botonActivo("Seleccion", app.herramienta == Herramienta::Seleccion, medio))
+    if (botonActivo("Balde", app.herramienta == Herramienta::Balde, medio))
+        cambiarHerramienta(Herramienta::Balde);
+    if (botonActivo("Seleccion", app.herramienta == Herramienta::Seleccion, completo))
         cambiarHerramienta(Herramienta::Seleccion);
+    // El tamano del borrador solo se muestra cuando el borrador esta activo
+    if (app.herramienta == Herramienta::Borrador)
+    {
+        ImGui::SetNextItemWidth(-FLT_MIN);
+        ImGui::SliderInt("##grosor", &app.grosorBorrador, 1, 6, "Grosor del borrador: %d");
+    }
 
     // --- Objeto seleccionado ---
     ImGui::SeparatorText("Objeto seleccionado");
@@ -562,10 +672,9 @@ void dibujarPanel(float altoVentana, bool mouseEnLienzo, Celda celdaMouse)
     else
         ImGui::TextDisabled("Ninguno (clic derecho o TAB)");
 
-    ImGui::BeginDisabled(!sel || !esRellenable(sel->tipo));
-    if (botonActivo("Rellenar ", sel && sel->relleno, medio)) rellenarSeleccion();
-    ImGui::SameLine();
-    if (ImGui::Button("Sin relleno", medio)) quitarRelleno();
+    // Para rellenar se usa el balde (o la tecla F); aqui solo se quita el relleno
+    ImGui::BeginDisabled(!sel || !esRellenable(sel->tipo) || !sel->relleno);
+    if (ImGui::Button("Sin relleno", completo)) quitarRelleno();
     ImGui::EndDisabled();
 
     const ImVec2 tercio((ancho - 2 * esp) / 3, 0);
@@ -657,41 +766,36 @@ void dibujarPanel(float altoVentana, bool mouseEnLienzo, Celda celdaMouse)
     {
     case Herramienta::Linea:     ImGui::TextWrapped("Clic en el inicio y clic en el final."); break;
     case Herramienta::Circulo:   ImGui::TextWrapped("Clic en el centro y clic para el radio."); break;
-    case Herramienta::Triangulo: ImGui::TextWrapped("Clic en los 3 vértices."); break;
+    case Herramienta::Triangulo: ImGui::TextWrapped("Clic en los 3 vertices."); break;
     case Herramienta::Seleccion: ImGui::TextWrapped("Clic sobre una figura y arrastra para moverla."); break;
-    case Herramienta::Dibujo:    ImGui::TextWrapped("Mueve el ratón para dibujar."); break;
+    case Herramienta::Dibujo:    ImGui::TextWrapped("Manten presionado el clic y arrastra para dibujar."); break;
+    case Herramienta::Balde:     ImGui::TextWrapped("Clic sobre la figura que quieres rellenar."); break;
+    case Herramienta::Borrador:  ImGui::TextWrapped("Manten presionado el clic y arrastra para borrar."); break;
     }
-    if (app.herramienta != Herramienta::Seleccion && app.herramienta != Herramienta::Dibujo)
+    bool herramientaPorClics = app.herramienta == Herramienta::Linea || app.herramienta == Herramienta::Circulo ||
+        app.herramienta == Herramienta::Triangulo;
+    if (herramientaPorClics)
         ImGui::Text("Puntos: %d / %d", (int)app.clicsPendientes.size(), (int)clicsNecesarios(app.herramienta));
-    ImGui::Text("Figuras: %d", (int)app.figuras.size());
+    // Los trazos del borrador no cuentan como figuras
+    int figurasVisibles = 0;
+    for (const Figura& f : app.figuras)
+        if (f.tipo != TipoFigura::Borrador) ++figurasVisibles;
+    ImGui::Text("Figuras: %d", figurasVisibles);
     if (mouseEnLienzo)
     {
         ImGui::SameLine();
         ImGui::TextDisabled("   Celda (%d, %d)", celdaMouse.first, celdaMouse.second);
-    }
-    else if (app.herramienta == Herramienta::Dibujo)
-    {
-        // Empieza un trazo nuevo; los puntos se agregan mientras se arrastra
-        guardarHistorial();
-        Figura trazo;
-        trazo.tipo = TipoFigura::Dibujo;
-        trazo.color = app.colorBorde;
-        trazo.colorRelleno = app.colorRelleno;
-        trazo.puntos = { {(float)celdaMouse.first, (float)celdaMouse.second} };
-        app.figuras.push_back(trazo);
-        app.seleccion = (int)app.figuras.size() - 1;
-        app.trazando = true;
     }
     if (!app.mensaje.empty() && glfwGetTime() - app.tiempoMensaje < 2.5)
         ImGui::TextColored(ImVec4(1.0f, 0.8f, 0.25f, 1.0f), "%s", app.mensaje.c_str());
 
     if (ImGui::CollapsingHeader("Atajos de teclado"))
     {
-        ImGui::BulletText("L / C / T / S / B: herramientas");
+        ImGui::BulletText("L / C / T / S / B / G: herramientas");
         ImGui::BulletText("Clic derecho o TAB: seleccionar");
         ImGui::BulletText("F: rellenar / quitar relleno");
         ImGui::BulletText("Q / E: rotar 15 grados");
-        ImGui::BulletText("Flechas: mover la selección");
+        ImGui::BulletText("Flechas: mover la seleccion");
         ImGui::BulletText("Z: deshacer   Supr: borrar");
         ImGui::BulletText("Esc: cancelar / deseleccionar");
     }
@@ -824,7 +928,7 @@ int main()
             app.clicsPendientes.clear();
             int indice = buscarFiguraEn(celdaMouse);
             seleccionar(indice);
-            if (indice < 0) mostrarMensaje("No hay ninguna figura ahí");
+            if (indice < 0) mostrarMensaje("No hay ninguna figura ahi");
         }
 
         if (mouseEnLienzo && app.clicPresionado)
@@ -837,6 +941,18 @@ int main()
                 app.arrastreGuardado = false;
                 app.celdaArrastre = celdaMouse;
             }
+            else if (app.herramienta == Herramienta::Dibujo)
+            {
+                empezarTrazo(TipoFigura::Dibujo, celdaMouse);
+            }
+            else if (app.herramienta == Herramienta::Borrador)
+            {
+                empezarTrazo(TipoFigura::Borrador, celdaMouse);
+            }
+            else if (app.herramienta == Herramienta::Balde)
+            {
+                rellenarConBalde(celdaMouse);
+            }
             else
             {
                 app.clicsPendientes.push_back(celdaMouse);
@@ -846,7 +962,7 @@ int main()
                     app.clicsPendientes.clear();
                     if (nueva.tipo == TipoFigura::Circulo && nueva.radio == 0)
                     {
-                        mostrarMensaje("El radio es demasiado pequeño");
+                        mostrarMensaje("El radio es demasiado chico");
                     }
                     else
                     {
@@ -866,20 +982,21 @@ int main()
                 celdaMouse.second - app.celdaArrastre.second);
             app.celdaArrastre = celdaMouse;
         }
-        if (app.trazando && app.clicAbajo && mouseEnLienzo)
+        // Trazo libre o borrador: mientras el boton siga presionado se agrega la celda del raton
+        if (app.trazando && app.clicAbajo && mouseEnLienzo &&
+            app.trazoActual >= 0 && app.trazoActual < (int)app.figuras.size())
         {
-            Figura* trazo = figuraSeleccionada();
-            if (trazo && trazo->tipo == TipoFigura::Dibujo)
-            {
-                Punto ultimo = trazo->puntos.back();
-                if ((int)ultimo.x != celdaMouse.first || (int)ultimo.y != celdaMouse.second)
-                    trazo->puntos.push_back({ (float)celdaMouse.first, (float)celdaMouse.second });
-            }
+            Figura& trazo = app.figuras[app.trazoActual];
+            bool celdaNueva = trazo.puntos.empty() ||
+                (int)trazo.puntos.back().x != celdaMouse.first ||
+                (int)trazo.puntos.back().y != celdaMouse.second;
+            if (celdaNueva)
+                trazo.puntos.push_back({ (float)celdaMouse.first, (float)celdaMouse.second });
         }
         if (app.clicSoltado)
         {
             app.arrastrando = false;
-            app.trazando = false;
+            terminarTrazo();
         }
 
         // --- Dibujo del lienzo ---
@@ -949,7 +1066,8 @@ int main()
         }
 
         // Vista previa de la figura en construcción
-        if (!app.clicsPendientes.empty() && app.herramienta != Herramienta::Seleccion )
+        if (!app.clicsPendientes.empty() && (app.herramienta == Herramienta::Linea ||
+            app.herramienta == Herramienta::Circulo || app.herramienta == Herramienta::Triangulo))
         {
             if (mouseEnLienzo)
             {
@@ -962,6 +1080,15 @@ int main()
             }
             for (const Celda& c : app.clicsPendientes)
                 r.rectBorde(xCelda(c.first) - 2, yCelda(c.second) - 2, cs + 3, cs + 3, 2, { 0.1f, 0.1f, 0.1f, 1 });
+        }
+
+        // Tamano del borrador bajo el cursor
+        if (mouseEnLienzo && app.herramienta == Herramienta::Borrador)
+        {
+            int desde = -(app.grosorBorrador - 1) / 2, hasta = app.grosorBorrador / 2;
+            float lado = (hasta - desde + 1) * cs;
+            r.rectBorde(xCelda(colMouse + desde), yCelda(filaMouse + hasta), lado, lado, 1,
+                { 0.35f, 0.35f, 0.40f, 1.0f });
         }
 
         // Celda bajo el cursor
